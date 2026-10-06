@@ -3,73 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apúntate - Iniciar Sesión</title>
+    <title>Apúntate - Asistencia por QR</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f4f4f9; }
-        .login-container { display: inline-block; padding: 30px; background: white; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); }
-        input { margin: 10px 0; padding: 10px; width: 220px; border: 1px solid #ccc; border-radius: 5px; }
-        button { padding: 10px 20px; cursor: pointer; background-color: #004b87; color: white; border: none; border-radius: 5px; font-weight: bold; }
+        .box { display: none; padding: 30px; background: white; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); width: 300px; margin: auto; margin-bottom: 20px;}
+        input { margin: 10px 0; padding: 10px; width: 90%; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;}
+        button { padding: 10px 20px; cursor: pointer; background-color: #004b87; color: white; border: none; border-radius: 5px; font-weight: bold; width: 100%; margin-top: 10px; box-sizing: border-box;}
         button:hover { background-color: #003366; }
+        .btn-rojo { background-color: #d9534f; }
+        .btn-rojo:hover { background-color: #c9302c; }
+        .link { color: #004b87; cursor: pointer; text-decoration: underline; font-size: 0.9em; margin-top: 15px; display: block; }
     </style>
 </head>
 <body>
     <h1>Apúntate</h1>
-    <p>Sistema de control de puntualidad</p>
-    
-    <!-- Caja de Login -->
-    <div class="login-container" id="loginBox">
+
+    <!-- 1. CAJA DE LOGIN -->
+    <div class="box" id="loginBox" style="display: block;">
         <h3>Iniciar Sesión</h3>
-        <input type="text" id="username" placeholder="Matrícula o Correo" required><br>
-        <input type="password" id="password" placeholder="Contraseña" required><br>
+        <input type="text" id="log_user" placeholder="Matrícula o Correo" required>
+        <input type="password" id="log_pass" placeholder="Contraseña" required>
         <button onclick="iniciarSesion()">Entrar</button>
-        <p id="mensaje" style="color: red; font-size: 0.9em;"></p>
+        <span class="link" onclick="mostrarRegistro()">¿Eres alumno? Regístrate aquí</span>
+        <p id="msg-login" style="color: red; font-size: 0.9em;"></p>
+    </div>
+
+    <!-- 2. CAJA DE REGISTRO ALUMNO -->
+    <div class="box" id="regAlumnoBox">
+        <h3>Registro de Alumno</h3>
+        <input type="text" id="reg_mat" placeholder="Matrícula (Ej. 20240001)" required>
+        <input type="text" id="reg_nom" placeholder="Nombre Completo" required>
+        <input type="email" id="reg_correo" placeholder="Correo Institucional" required>
+        <input type="password" id="reg_pass" placeholder="Crear Contraseña" required>
+        <button onclick="registrarAlumno()">Registrarme</button>
+        <span class="link" onclick="mostrarLogin()">Volver a Iniciar Sesión</span>
+        <p id="msg-reg" style="font-size: 0.9em;"></p>
     </div>
     
-    <!-- Panel del Usuario (Oculto por defecto) -->
-    <div class="login-container" id="panelBox" style="display: none;">
+    <!-- 3. PANEL PRINCIPAL DE USUARIO -->
+    <div class="box" id="panelBox" style="width: 400px;">
         <h3 id="bienvenida"></h3>
         <p id="rol-usuario" style="color: #666;"></p>
-        <button onclick="cerrarSesion()" style="background-color: #d9534f;">Cerrar Sesión</button>
+
+        <!-- SUB-PANEL EXCLUSIVO ADMIN -->
+        <div id="adminPanel" style="display: none; border-top: 1px solid #eee; margin-top: 20px; padding-top: 20px;">
+            <h4>Crear Nuevo Profesor</h4>
+            <input type="text" id="prof_nom" placeholder="Nombre del Profesor">
+            <input type="email" id="prof_correo" placeholder="Correo (Será su usuario)">
+            <input type="password" id="prof_pass" placeholder="Contraseña temporal">
+            <button onclick="crearProfesor()">Alta de Profesor</button>
+            <p id="msg-admin" style="font-size: 0.9em;"></p>
+        </div>
+
+        <button class="btn-rojo" onclick="cerrarSesion()">Cerrar Sesión</button>
     </div>
 
     <script>
+        function mostrarRegistro() { document.getElementById('loginBox').style.display = 'none'; document.getElementById('regAlumnoBox').style.display = 'block'; }
+        function mostrarLogin() { document.getElementById('regAlumnoBox').style.display = 'none'; document.getElementById('loginBox').style.display = 'block'; }
+
         async function iniciarSesion() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            
-            // FastAPI requiere que los datos se envíen como formulario (URL-encoded)
             const formData = new URLSearchParams();
-            formData.append('username', user);
-            formData.append('password', pass);
+            formData.append('username', document.getElementById('log_user').value);
+            formData.append('password', document.getElementById('log_pass').value);
 
-            const response = await fetch('/token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData
-            });
-
+            const response = await fetch('/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData });
             if (response.ok) {
                 const data = await response.json();
-                // Guardamos el token en el navegador
                 localStorage.setItem('token', data.access_token);
                 
-                // Cambiamos la vista
                 document.getElementById('loginBox').style.display = 'none';
-                document.getElementById('panelBox').style.display = 'inline-block';
+                document.getElementById('panelBox').style.display = 'block';
                 document.getElementById('bienvenida').innerText = `Hola, ${data.nombre}`;
                 document.getElementById('rol-usuario').innerText = `Rol: ${data.rol.toUpperCase()}`;
+                
+                document.getElementById('adminPanel').style.display = (data.rol === 'admin') ? 'block' : 'none';
             } else {
-                document.getElementById('mensaje').innerText = "Usuario o contraseña incorrectos";
+                document.getElementById('msg-login').innerText = "Credenciales incorrectas";
+            }
+        }
+
+        async function registrarAlumno() {
+            const mat = document.getElementById('reg_mat').value;
+            const nom = document.getElementById('reg_nom').value;
+            const correo = document.getElementById('reg_correo').value;
+            const pass = document.getElementById('reg_pass').value;
+
+            const response = await fetch('/api/alumnos/registro', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matricula: mat, nombre: nom, correo: correo, password: pass })
+            });
+
+            const result = await response.json();
+            const msgObj = document.getElementById('msg-reg');
+            msgObj.innerText = result.mensaje || result.detail;
+            msgObj.style.color = response.ok ? "green" : "red";
+            if(response.ok) { setTimeout(mostrarLogin, 2000); }
+        }
+
+        async function crearProfesor() {
+            const token = localStorage.getItem('token');
+            const nom = document.getElementById('prof_nom').value;
+            const correo = document.getElementById('prof_correo').value;
+            const pass = document.getElementById('prof_pass').value;
+
+            const response = await fetch('/api/profesores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ nombre: nom, correo: correo, password: pass })
+            });
+
+            const result = await response.json();
+            const msgObj = document.getElementById('msg-admin');
+            msgObj.innerText = result.mensaje || result.detail;
+            msgObj.style.color = response.ok ? "green" : "red";
+            
+            if(response.ok){
+                document.getElementById('prof_nom').value = '';
+                document.getElementById('prof_correo').value = '';
+                document.getElementById('prof_pass').value = '';
             }
         }
 
         function cerrarSesion() {
             localStorage.removeItem('token');
-            document.getElementById('loginBox').style.display = 'inline-block';
-            document.getElementById('panelBox').style.display = 'none';
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-            document.getElementById('mensaje').innerText = '';
+            location.reload();
         }
     </script>
 </body>
