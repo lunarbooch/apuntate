@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
@@ -22,7 +23,6 @@ def init_db():
     
     cursor.execute("SELECT * FROM usuarios WHERE identificador='admin'")
     if not cursor.fetchone():
-        # Encriptación directa con bcrypt
         hashed_pw = bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         cursor.execute("INSERT INTO usuarios (identificador, nombre_completo, password_hash, rol) VALUES (?, ?, ?, ?)", 
                        ("admin", "Administrador Principal", hashed_pw, "admin"))
@@ -46,13 +46,22 @@ def create_access_token(data: dict, expires_delta: timedelta):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+# --- RUTAS DEL FRONTEND ---
+@app.get("/")
+def leer_index():
+    return FileResponse("../frontend/index.html")
+
+@app.get("/api/estado")
+def estado_api():
+    return {"estado": "En línea y Seguro", "proyecto": "Apúntate"}
+
+# --- RUTAS DE SEGURIDAD ---
 @app.post("/token")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: sqlite3.Connection = Depends(get_db)):
     cursor = db.cursor()
     cursor.execute("SELECT * FROM usuarios WHERE identificador=?", (form_data.username,))
     usuario = cursor.fetchone()
 
-    # Validación directa con bcrypt
     if not usuario or not bcrypt.checkpw(form_data.password.encode('utf-8'), usuario["password_hash"].encode('utf-8')):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
