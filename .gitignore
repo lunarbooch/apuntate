@@ -1,0 +1,14 @@
+# Entornos virtuales y caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# Dependencias Web
+node_modules/
+dist/
+
+# Archivos del sistema
+.DS_Store
