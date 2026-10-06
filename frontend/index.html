@@ -3,22 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apúntate Web</title>
+    <title>Apúntate - Iniciar Sesión</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f4f4f9; }
+        .login-container { display: inline-block; padding: 30px; background: white; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1); }
+        input { margin: 10px 0; padding: 10px; width: 220px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; cursor: pointer; background-color: #004b87; color: white; border: none; border-radius: 5px; font-weight: bold; }
+        button:hover { background-color: #003366; }
     </style>
 </head>
 <body>
-    <h1>Bienvenido a Apúntate</h1>
-    <p>Sistema automatizado de asistencia por código QR</p>
-    <button onclick="probarAPI()">Probar Conexión Backend</button>
-    <p id="resultado"></p>
+    <h1>Apúntate</h1>
+    <p>Sistema de control de puntualidad</p>
+    
+    <!-- Caja de Login -->
+    <div class="login-container" id="loginBox">
+        <h3>Iniciar Sesión</h3>
+        <input type="text" id="username" placeholder="Matrícula o Correo" required><br>
+        <input type="password" id="password" placeholder="Contraseña" required><br>
+        <button onclick="iniciarSesion()">Entrar</button>
+        <p id="mensaje" style="color: red; font-size: 0.9em;"></p>
+    </div>
+    
+    <!-- Panel del Usuario (Oculto por defecto) -->
+    <div class="login-container" id="panelBox" style="display: none;">
+        <h3 id="bienvenida"></h3>
+        <p id="rol-usuario" style="color: #666;"></p>
+        <button onclick="cerrarSesion()" style="background-color: #d9534f;">Cerrar Sesión</button>
+    </div>
 
     <script>
-        async function probarAPI() {
-            const respuesta = await fetch('/api/estado');
-            const datos = await respuesta.json();
-            document.getElementById('resultado').innerText = "Estado: " + datos.estado;
+        async function iniciarSesion() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            
+            // FastAPI requiere que los datos se envíen como formulario (URL-encoded)
+            const formData = new URLSearchParams();
+            formData.append('username', user);
+            formData.append('password', pass);
+
+            const response = await fetch('/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // Guardamos el token en el navegador
+                localStorage.setItem('token', data.access_token);
+                
+                // Cambiamos la vista
+                document.getElementById('loginBox').style.display = 'none';
+                document.getElementById('panelBox').style.display = 'inline-block';
+                document.getElementById('bienvenida').innerText = `Hola, ${data.nombre}`;
+                document.getElementById('rol-usuario').innerText = `Rol: ${data.rol.toUpperCase()}`;
+            } else {
+                document.getElementById('mensaje').innerText = "Usuario o contraseña incorrectos";
+            }
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('token');
+            document.getElementById('loginBox').style.display = 'inline-block';
+            document.getElementById('panelBox').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('mensaje').innerText = '';
         }
     </script>
 </body>
