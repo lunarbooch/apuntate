@@ -1,19 +1,17 @@
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 import sqlite3
+import bcrypt
 import os
 
 app = FastAPI(title="Apúntate API Segura")
 
-# Configuración del Token JWT
-SECRET_KEY = "apuntate_secreto_super_seguro_2026" # Clave maestra para firmar los tokens
+SECRET_KEY = "apuntate_secreto_super_seguro_2026"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 # El token expirará en 1 hora
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 DB_PATH = "../database/apuntate.db"
 
 def init_db():
@@ -24,7 +22,8 @@ def init_db():
     
     cursor.execute("SELECT * FROM usuarios WHERE identificador='admin'")
     if not cursor.fetchone():
-        hashed_pw = pwd_context.hash("admin123")
+        # Encriptación directa con bcrypt
+        hashed_pw = bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         cursor.execute("INSERT INTO usuarios (identificador, nombre_completo, password_hash, rol) VALUES (?, ?, ?, ?)", 
                        ("admin", "Administrador Principal", hashed_pw, "admin"))
     conn.commit()
@@ -40,7 +39,6 @@ def get_db():
     finally:
         conn.close()
 
-# Función que empaqueta y encripta los datos en un Token
 def create_access_token(data: dict, expires_delta: timedelta):
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
@@ -54,15 +52,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: sqlite3.Connecti
     cursor.execute("SELECT * FROM usuarios WHERE identificador=?", (form_data.username,))
     usuario = cursor.fetchone()
 
-    # Verificamos que el usuario exista y que Bcrypt valide la contraseña
-    if not usuario or not pwd_context.verify(form_data.password, usuario["password_hash"]):
+    # Validación directa con bcrypt
+    if not usuario or not bcrypt.checkpw(form_data.password.encode('utf-8'), usuario["password_hash"].encode('utf-8')):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Creamos el token inyectando el identificador y el rol
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": usuario["identificador"], "rol": usuario["rol"]}, 
