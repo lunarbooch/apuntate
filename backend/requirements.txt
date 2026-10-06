@@ -1,2 +1,5 @@
 fastapi
 uvicorn
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart
