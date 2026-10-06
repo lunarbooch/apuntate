@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apúntate Web</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <h1>Bienvenido a Apúntate</h1>
+    <p>Sistema automatizado de asistencia por código QR</p>
+    <button onclick="probarAPI()">Probar Conexión Backend</button>
+    <p id="resultado"></p>
+
+    <script>
+        async function probarAPI() {
+            const respuesta = await fetch('/api/estado');
+            const datos = await respuesta.json();
+            document.getElementById('resultado').innerText = "Estado: " + datos.estado;
+        }
+    </script>
+</body>
+</html>
